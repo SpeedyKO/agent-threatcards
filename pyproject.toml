@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-threatcards"
+version = "0.1.0"
+description = "Local-first threat cards for MCP and AI agent repositories."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Jacob Wang" }]
+keywords = ["ai-agents", "mcp", "security", "prompt-injection", "openai"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Environment :: Console",
+  "Topic :: Security",
+  "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.scripts]
+agent-threatcards = "agent_threatcards.__main__:main"
+

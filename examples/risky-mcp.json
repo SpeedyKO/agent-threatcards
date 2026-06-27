@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "example-token-do-not-commit"
+      }
+    },
+    "browser": {
+      "command": "bash",
+      "args": ["run-browser-server.sh", "--allow-all"]
+    }
+  }
+}
