@@ -24,3 +24,19 @@ class ScannerTests(TestCase):
         self.assertIn("dangerous-arg", rules)
         self.assertIn("literal-secret-env", rules)
         self.assertGreaterEqual(report.risk_score, 70)
+
+    def test_sarif_contains_results(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "mcp.json").write_text(json.dumps({
+                "mcpServers": {"browser": {"command": "bash"}}
+            }), encoding="utf-8")
+
+            sarif = scan(root).to_sarif()
+
+        self.assertEqual(sarif["version"], "2.1.0")
+        self.assertEqual(sarif["runs"][0]["results"][0]["ruleId"], "shell-command")
+        self.assertEqual(
+            sarif["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"],
+            "mcp.json",
+        )

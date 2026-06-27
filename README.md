@@ -44,6 +44,12 @@ JSON output for CI:
 agent-threatcards . --json
 ```
 
+SARIF output for GitHub code scanning:
+
+```bash
+agent-threatcards . --sarif > agent-threatcards.sarif
+```
+
 ## Example
 
 ```text
@@ -65,6 +71,36 @@ Risk score: **100/100**
 - inline secret-like environment values
 - prompt injection phrases in repo text
 - data access + untrusted input + external send combinations
+
+## GitHub Code Scanning
+
+Use SARIF output when you want findings to show up in GitHub's Security tab:
+
+```yaml
+name: agent-threatcards
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install git+https://github.com/SpeedyKO/agent-threatcards.git
+      - run: agent-threatcards . --sarif > agent-threatcards.sarif
+        continue-on-error: true
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: agent-threatcards.sarif
+```
 
 ## Safety And Privacy
 

@@ -64,6 +64,37 @@ class Report:
             ]
         return "\n".join(lines).rstrip()
 
+    def to_sarif(self) -> dict[str, Any]:
+        rules = {
+            item.rule: {
+                "id": item.rule,
+                "name": item.title,
+                "shortDescription": {"text": item.title},
+                "help": {"text": item.fix},
+            }
+            for item in self.findings
+        }
+        return {
+            "version": "2.1.0",
+            "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+            "runs": [{
+                "tool": {"driver": {"name": "agent-threatcards", "rules": list(rules.values())}},
+                "results": [self._sarif_result(item) for item in self.findings],
+            }],
+        }
+
+    def _sarif_result(self, item: Finding) -> dict[str, Any]:
+        return {
+            "ruleId": item.rule,
+            "level": {"high": "error", "medium": "warning", "low": "note"}[item.severity],
+            "message": {"text": f"{item.evidence}. Fix: {item.fix}"},
+            "locations": [{
+                "physicalLocation": {
+                    "artifactLocation": {"uri": _uri(self.path, Path(item.path))},
+                }
+            }],
+        }
+
 
 def scan(path: Path) -> Report:
     root = path.resolve()
@@ -142,3 +173,9 @@ def _scan_tool_mix(root: Path, names: list[str]) -> list[Finding]:
 def _finding(severity: str, rule: str, file: Path, server: str, evidence: str, fix: str) -> Finding:
     return Finding(severity, rule, f"MCP server `{server}` needs review", str(file), evidence, fix)
 
+
+def _uri(root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(root).as_posix()
+    except ValueError:
+        return path.as_posix()
