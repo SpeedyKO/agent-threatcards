@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest import TestCase
 
 from agent_threatcards.bootstrap import init_project
+from agent_threatcards.rules import explain
 from agent_threatcards import scan
 
 
@@ -73,3 +74,9 @@ class ScannerTests(TestCase):
                 json.loads(baseline.read_text(encoding="utf-8"))["findings"][0]["rule"],
                 "shell-command",
             )
+
+    def test_explain_rule(self) -> None:
+        text = explain("lethal-trifecta")
+
+        self.assertIsNotNone(text)
+        self.assertIn("Data access", text)

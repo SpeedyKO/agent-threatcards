@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from .bootstrap import init_project
+from .rules import RULES, explain
 from .scanner import scan
 
 
@@ -20,10 +21,12 @@ def _load_baseline(path: Path) -> set[str]:
 def main() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "init":
         return _init(sys.argv[2:])
+    if len(sys.argv) > 1 and sys.argv[1] == "explain":
+        return _explain(sys.argv[2:])
 
     parser = argparse.ArgumentParser(
         description="Generate threat cards for MCP and AI agent repos.",
-        epilog="Command: agent-threatcards init [path] creates a baseline and GitHub Code Scanning workflow.",
+        epilog="Commands: agent-threatcards init [path], agent-threatcards explain <rule>",
     )
     parser.add_argument("path", nargs="?", default=".", help="Path to scan.")
     parser.add_argument("--json", action="store_true", help="Print JSON instead of Markdown.")
@@ -60,6 +63,25 @@ def _init(argv: list[str]) -> int:
         return 2
     print(f"created {workflow}")
     print(f"created {baseline}")
+    return 0
+
+
+def _explain(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description="Explain an agent-threatcards rule.")
+    parser.add_argument("rule", nargs="?", help="Rule id to explain.")
+    parser.add_argument("--list", action="store_true", help="List available rule ids.")
+    args = parser.parse_args(argv)
+
+    if args.list:
+        print("\n".join(sorted(RULES)))
+        return 0
+    if not args.rule:
+        parser.error("rule is required unless --list is used")
+    text = explain(args.rule)
+    if text is None:
+        print(f"unknown rule: {args.rule}", file=sys.stderr)
+        return 2
+    print(text)
     return 0
 
 

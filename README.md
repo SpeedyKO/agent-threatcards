@@ -68,6 +68,12 @@ Set up a repo with a baseline and GitHub Code Scanning workflow:
 agent-threatcards init
 ```
 
+Explain a rule:
+
+```bash
+agent-threatcards explain lethal-trifecta
+```
+
 ## Example
 
 ```text

@@ -2,6 +2,18 @@
 
 `agent-threatcards` uses small, explainable rules. Every finding should have evidence and a fix a developer can act on in one review.
 
+List rules from the CLI:
+
+```bash
+agent-threatcards explain --list
+```
+
+Explain one rule:
+
+```bash
+agent-threatcards explain lethal-trifecta
+```
+
 ## `shell-command`
 
 Flags MCP servers launched through shells such as `bash`, `sh`, `cmd`, `powershell`, or `pwsh`.
@@ -41,4 +53,3 @@ Flags the combination of data access, untrusted input, and external send capabil
 Why it matters: this is where agent risk becomes practical: the agent can read sensitive context, ingest hostile instructions, and send data somewhere else.
 
 Fix: split duties across profiles, remove one leg of the combination, or require human approval before outbound actions.
-
