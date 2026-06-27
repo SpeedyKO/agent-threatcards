@@ -62,6 +62,12 @@ Fail only on new findings:
 agent-threatcards . --baseline agent-threatcards.baseline.json
 ```
 
+Set up a repo with a baseline and GitHub Code Scanning workflow:
+
+```bash
+agent-threatcards init
+```
+
 ## Example
 
 ```text

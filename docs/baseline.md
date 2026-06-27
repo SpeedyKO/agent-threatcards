@@ -8,6 +8,12 @@ Create a baseline from the current repo:
 agent-threatcards . --write-baseline agent-threatcards.baseline.json
 ```
 
+Or initialize both the baseline and GitHub Code Scanning workflow:
+
+```bash
+agent-threatcards init
+```
+
 Then scan with the baseline:
 
 ```bash
@@ -26,4 +32,3 @@ Only findings whose stable fingerprint is not in the baseline remain in the repo
 ## Fingerprints
 
 Fingerprints are based on rule id, repository-relative path, and evidence. They are stable across line movement but change when the actual risk changes.
-
