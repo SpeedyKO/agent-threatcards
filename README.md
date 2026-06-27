@@ -50,6 +50,18 @@ SARIF output for GitHub code scanning:
 agent-threatcards . --sarif > agent-threatcards.sarif
 ```
 
+Create a baseline for known findings:
+
+```bash
+agent-threatcards . --write-baseline agent-threatcards.baseline.json
+```
+
+Fail only on new findings:
+
+```bash
+agent-threatcards . --baseline agent-threatcards.baseline.json
+```
+
 ## Example
 
 ```text
@@ -102,11 +114,19 @@ jobs:
           sarif_file: agent-threatcards.sarif
 ```
 
+If your repo already has accepted findings, add `--baseline agent-threatcards.baseline.json` to the scan command.
+
 ## Safety And Privacy
 
 The scanner is local-first. It does not call model APIs, upload repository contents, install dependencies, or execute MCP servers.
 
 This is not a vulnerability scanner or compliance product. It is a lightweight threat modeling tool for catching obvious agent-risk combinations before a repo, demo, or customer workflow goes live.
+
+## Documentation
+
+- [Rule catalog](docs/rules.md)
+- [Baseline workflow](docs/baseline.md)
+- [Design principles](docs/design.md)
 
 ## Development
 

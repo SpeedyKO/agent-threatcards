@@ -40,3 +40,19 @@ class ScannerTests(TestCase):
             sarif["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"],
             "mcp.json",
         )
+        self.assertEqual(
+            sarif["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["region"]["startLine"],
+            1,
+        )
+
+    def test_baseline_filters_existing_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "mcp.json").write_text(json.dumps({
+                "mcpServers": {"browser": {"command": "bash"}}
+            }), encoding="utf-8")
+
+            report = scan(root)
+            fingerprints = {report.to_dict()["findings"][0]["fingerprint"]}
+
+        self.assertEqual(report.without_fingerprints(fingerprints).findings, ())

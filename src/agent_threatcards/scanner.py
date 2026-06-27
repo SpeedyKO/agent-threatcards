@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,7 @@ class Finding:
     rule: str
     title: str
     path: str
+    line: int
     evidence: str
     fix: str
 
@@ -45,8 +47,26 @@ class Report:
         return {
             "path": str(self.path),
             "risk_score": self.risk_score,
-            "findings": [asdict(item) for item in self.findings],
+            "findings": [{**asdict(item), "fingerprint": _fingerprint(self.path, item)} for item in self.findings],
         }
+
+    def to_baseline(self) -> dict[str, Any]:
+        return {
+            "version": 1,
+            "tool": "agent-threatcards",
+            "findings": [
+                {
+                    "fingerprint": _fingerprint(self.path, item),
+                    "rule": item.rule,
+                    "path": _uri(self.path, Path(item.path)),
+                    "line": item.line,
+                }
+                for item in self.findings
+            ],
+        }
+
+    def without_fingerprints(self, fingerprints: set[str]) -> "Report":
+        return Report(self.path, tuple(item for item in self.findings if _fingerprint(self.path, item) not in fingerprints))
 
     def to_markdown(self) -> str:
         lines = [f"# Agent Threat Cards", "", f"Risk score: **{self.risk_score}/100**", ""]
@@ -57,7 +77,7 @@ class Report:
                 f"## {item.severity.upper()}: {item.title}",
                 "",
                 f"- Rule: `{item.rule}`",
-                f"- File: `{item.path}`",
+                f"- File: `{item.path}:{item.line}`",
                 f"- Evidence: {item.evidence}",
                 f"- Fix: {item.fix}",
                 "",
@@ -88,9 +108,11 @@ class Report:
             "ruleId": item.rule,
             "level": {"high": "error", "medium": "warning", "low": "note"}[item.severity],
             "message": {"text": f"{item.evidence}. Fix: {item.fix}"},
+            "partialFingerprints": {"agentThreatcards/v1": _fingerprint(self.path, item)},
             "locations": [{
                 "physicalLocation": {
                     "artifactLocation": {"uri": _uri(self.path, Path(item.path))},
+                    "region": {"startLine": item.line},
                 }
             }],
         }
@@ -147,7 +169,7 @@ def _scan_json(file: Path, mcp_names: list[str]) -> list[Finding]:
         if isinstance(env, dict):
             for key, value in env.items():
                 if any(word in key.lower() for word in SECRET_WORDS) and value and not str(value).startswith("${"):
-                    findings.append(_finding("medium", "literal-secret-env", file, name, f"`{key}` is set inline", "read secrets from the environment instead of committing values"))
+                    findings.append(_finding("medium", "literal-secret-env", file, name, f"`{key}` is set inline", "read secrets from the environment instead of committing values", key))
     return findings
 
 
@@ -157,7 +179,7 @@ def _scan_text(file: Path) -> list[Finding]:
     except OSError:
         return []
     return [
-        Finding("medium", "prompt-injection-text", "Prompt injection phrase in repo text", str(file), f"contains `{phrase}`", "keep hostile prompts in clearly labeled test fixtures")
+        Finding("medium", "prompt-injection-text", "Prompt injection phrase in repo text", str(file), _line_of(file, phrase), f"contains `{phrase}`", "keep hostile prompts in clearly labeled test fixtures")
         for phrase in PROMPT_INJECTION_PHRASES
         if phrase in text
     ]
@@ -166,12 +188,12 @@ def _scan_text(file: Path) -> list[Finding]:
 def _scan_tool_mix(root: Path, names: list[str]) -> list[Finding]:
     joined = " ".join(names)
     if any(word in joined for word in DATA_TOOLS) and any(word in joined for word in SINK_TOOLS) and any(word in joined for word in UNTRUSTED_TOOLS):
-        return [Finding("high", "lethal-trifecta", "Data access, external send, and untrusted input appear together", str(root), f"MCP servers: {', '.join(sorted(set(names)))}", "split duties across profiles or require human approval before sending data out")]
+        return [Finding("high", "lethal-trifecta", "Data access, external send, and untrusted input appear together", str(root), 1, f"MCP servers: {', '.join(sorted(set(names)))}", "split duties across profiles or require human approval before sending data out")]
     return []
 
 
-def _finding(severity: str, rule: str, file: Path, server: str, evidence: str, fix: str) -> Finding:
-    return Finding(severity, rule, f"MCP server `{server}` needs review", str(file), evidence, fix)
+def _finding(severity: str, rule: str, file: Path, server: str, evidence: str, fix: str, needle: str | None = None) -> Finding:
+    return Finding(severity, rule, f"MCP server `{server}` needs review", str(file), _line_of(file, needle or server), evidence, fix)
 
 
 def _uri(root: Path, path: Path) -> str:
@@ -179,3 +201,18 @@ def _uri(root: Path, path: Path) -> str:
         return path.resolve().relative_to(root).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def _fingerprint(root: Path, item: Finding) -> str:
+    text = "|".join((item.rule, _uri(root, Path(item.path)), item.evidence))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
+def _line_of(path: Path, needle: str) -> int:
+    try:
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if needle.lower() in line.lower():
+                return number
+    except OSError:
+        pass
+    return 1
